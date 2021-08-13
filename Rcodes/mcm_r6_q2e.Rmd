@@ -1,0 +1,106 @@
+---
+title: "mcm_r6_q2e"
+author: "renyan"
+date: "2020/3/9"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# 深复制，在上面操作对原数据没有影响
+# !!!!!!!!!!!!!!!!!!在这里修改!!!!!!!!!!!!!!!!!!!
+data_e <- pc
+```
+
+
+# 所有形容词
+
+adj_num 对 star_rating 做一个回归
+
+```{r}
+library(ggplot2)
+data_e$star_rating <- as.factor(data_e$star_rating)
+ggplot(data_e, aes(x = adj_num, y = star_rating, colour = adj_num)) +
+  geom_point(size = 8, alpha = 0.1)
+  # scale_colour_distiller(palette = "Greens", direction = 1)
+```
+
+直观看有关系，下面进行回归
+
+
+```{r}
+data_e$star_rating <- as.numeric(data_e$star_rating)
+fit_e1 <- lm(star_rating~adj_num, data_e)
+summary(fit_e1)
+```
+
+
+
+# 查看该数据集词频最高的形容词
+
+- 此处导出到 python，没有再读取的数值，直接取 python 分析结果
+- 导出目标文档所有的评论
+
+
+```{r}
+setwd("D:/Ryanna/mcm_real/Rcodes")
+rw_e <- data_e$review_body
+write.table(rw_e, '../Data/question_e_reviews.txt', col.names = FALSE, quote = FALSE, row.names = FALSE)
+```
+
+
+- 归来
+```{r}
+setwd("D:/Ryanna/mcm_real/Rcodes")
+data_e_add <- read.csv('../Data/question_e_descriptor.csv', stringsAsFactors = F)
+data_e <- cbind(data_e, data_e_add)
+write.csv(data_e, '../Data/question_e_out.csv', row.names = F)
+```
+
+
+# 可视化
+
+- 在线生成
+
+```{r}
+data_e$have_disappointed <- as.numeric(data_e$have_disappointed)
+data_e$have_bad <- as.numeric(data_e$have_bad)
+have_good <- data_e[data_e$have_disappointed == 1|data_e$have_bad == 1,]
+no_good <- data_e[data_e$have_disappointed == 0 & data_e$have_bad == 0,]
+
+data_e$have_comfortable <- as.numeric(data_e$have_comfortable)
+data_e$have_cute <- as.numeric(data_e$have_cute)
+have_bad <- data_e[data_e$have_comfortable == 1|data_e$have_cute == 1,]
+no_bad <- data_e[data_e$have_comfortable == 0 & data_e$have_cute == 0,]
+```
+
+```{r}
+ddply(have_good, .(star_rating), nrow)
+ddply(no_good, .(star_rating), nrow)
+ddply(have_bad, .(star_rating), nrow)
+ddply(no_bad, .(star_rating), nrow)
+```
+
+
+
+
+
+
+
+
+```{r}
+# names(data_e)
+# data_e$have_disappointed <- as.factor(data_e$have_disappointed)
+# data_e$star_rating <- as.numeric(data_e$star_rating)
+# ggplot(data_e, aes(x = have_disappointed, y = star_rating, fill = star_rating)) +
+#   geom_bar(stat="identity",position="stack")+
+#   ylim(0, 1)
+```
+
+
+
+
+

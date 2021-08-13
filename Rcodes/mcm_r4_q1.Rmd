@@ -1,0 +1,191 @@
+---
+title: "mcm_r4_q1"
+author: "renyan"
+date: "2020/3/8"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# 第一问数据描述部分
+
+
+> 格外注意：该文档数据框与前面分析分离，但是每次只对一个数据框进行绘制，修改读取文件路径即可修改所有描述的数据。
+
+```{r}
+setwd("D:/Ryanna/mcm_real/Rcodes")
+# !!!!!!!!!!!!!!!!!!!!!!在这里修改数据!!!!!!!!!!!!!!!!!!!!!!
+data <- read.csv('../Data/hair_dryer.csv', stringsAsFactors = F)
+na.omit(mv)
+summary(data)
+```
+
+## 从评论中提取基础信息
+
+
+```{r}
+library(stringr)
+# 输入一个字符串，输出有多少个单词
+get_review_word_num <- function(x){
+  len <- length(str_extract_all(x, '[a-zA-Z]+')[[1]])
+  return(len)
+}
+# 输入一个字符串，输出有多少个句子
+get_review_sen_num <- function(x){
+  sen_num <- length(str_extract_all(x, '[.|?|,]+')[[1]])+1
+  return(sen_num)
+}
+```
+
+
+```{r}
+# 单词数
+data$word_num <- unlist(lapply(data$review_body, get_review_word_num))
+# 句子
+data$sen_num <- unlist(lapply(data$review_body, get_review_sen_num))
+# 平均每句的单词数
+data$word_per_sen <- data$word_num/data$sen_num
+```
+
+
+
+## 给helpful_votes归类
+
+0为一类，1-49一类，50以上类
+
+```{r}
+data$helpful_level = 0
+data[data$helpful_votes == 0,]$helpful_level <- 1
+data[data$helpful_votes > 0 & data$helpful_votes < 50,]$helpful_level <- 2
+data[data$helpful_votes >= 50,]$helpful_level <- 3
+data$helpful_level <- as.factor(data$helpful_level)
+summary(data$helpful_level)
+```
+
+
+```{r}
+library(reshape2)
+data_box <- data[c('helpful_level', 'word_num', 'sen_num')]
+data_box <- melt(data_box, id.vars = c('helpful_level'), value.name = "number")
+head(data_box)
+```
+
+
+
+```{r}
+library(ggplot2)
+data_box$helpful_level <- as.factor(data_box$helpful_level)
+ggplot(data_box, aes(x = helpful_level, y = log(number), fill = variable)) +
+  geom_boxplot(outlier.alpha = 0.05, alpha = 0.5, notch = TRUE)
+  labs(title = 'Number of Words and Sentences\nClassified by Helpfulness Level') +
+  # theme(plot.title = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0.5),
+        title=element_text(family="Times New Roman",size=12),
+        axis.title.x = element_text(family="Times New Roman",size=12),
+        axis.title.y = element_text(family="Times New Roman",size=12))
+```
+
+生成带边际频数的列联表
+
+```{r}
+# 改变数据类型
+data$star_rating <- as.numeric(data$star_rating)
+data$helpful_level <- as.numeric(data$helpful_level)
+margin <- addmargins(table(data[c('helpful_level', 'star_rating')]))
+# margin <- addmargins(prop.table(margin))
+```
+
+## 卡方检验
+
+检验 helpful_level 和 star_rating 之间是否有关联
+
+```{r}
+dim(margin) = c(4,6)
+testee <- margin[1:3, 1:5]
+(chitest <- chisq.test(testee))
+chitest$expected  # expected counts under the null
+chitest$residuals  # Pearson residuals
+chitest$stdres     # standardized residuals
+```
+
+原假设是无关，p 值 < 0.5 认为在对应置信区间上拒绝原假设，下面对其进行可视化 
+
+
+```{r}
+library(plyr)
+library(reshape2)
+t <- ddply(data, .(helpful_level, star_rating), nrow)
+# # 长表改宽表，暂时没用
+# t2 <- dcast(t1, helpful_level~star_rating)
+# names(t2) = c('helpful_level', 'star_one', 'star_two', 'star_three', 'star_four', 'star_five')
+# t2$helpful_level <- as.factor(t2$helpful_level)
+```
+
+
+```{r}
+# 重新运行这里，一定要先运行上一块
+t_level_sum <- ddply(data, .(helpful_level), nrow)
+t_rating_sum <- ddply(data, .(star_rating), nrow)
+names(t_level_sum) <- c("helpful_level", "level_sum")
+names(t_rating_sum) <- c("star_rating", "rating_sum")
+t <- merge(t, t_level_sum, by = 'helpful_level')
+t <- merge(t, t_rating_sum, by = 'star_rating')
+# 按行，按列比例
+t$level_ratio <- t$V1/t$level_sum
+t$rating_ratio <- t$V1/t$rating_sum
+```
+
+```{r}
+ggplot(t, aes(helpful_level, star_rating)) + 
+  geom_tile(aes(fill = level_ratio),colour = "white") +
+  scale_fill_gradient(name="Value", low = "#87CEFA",high = "#000000") +
+  geom_text(aes(helpful_level, star_rating, label = sprintf("%0.4f", level_ratio)), color = "white", size = 3)
+
+ggplot(t, aes(helpful_level, star_rating)) + 
+  geom_tile(aes(fill = rating_ratio),colour = "white") +
+  scale_fill_gradient(name="Value", low = "#F3D42D",high = "#000000") +
+  geom_text(aes(helpful_level, star_rating, label = sprintf("%0.4f", rating_ratio)), color = "white", size = 3)
+
+# p_cor + scale_fill_gradient(name="Value", low = "white",high = "blue")
+#   theme(axis.text.x = element_text(vjust = 0.5, hjust = 0.5, angle = 90))
+#   coord_fixed(ratio=1)+
+#   theme(axis.text= element_text(size = 8,family="ARL"))+
+#   theme(plot.margin = unit(c(0.1,0,0,0), unit="mm"))+
+#   labs(x = "Var1", y = "Var2", title = "correlation")+
+#   theme(plot.title = element_text(size = 13,hjust = 0.5,family = "ARL" ))+
+#   theme(legend.key.width=unit(3,'mm'),legend.key.height=unit(3,'cm'))+
+#   theme(legend.title = element_text(size = 8))
+```
+
+
+# 三个类别产品的星级差别
+
+#05B8F3 #49CAF3 #8FE5F3 #C2F3F0 #E0F3E8
+
+```{r}
+ddply(hd, .(star_rating), nrow)
+ddply(pc, .(star_rating), nrow)
+ddply(mv, .(star_rating), nrow)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

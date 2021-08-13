@@ -1,0 +1,98 @@
+---
+title: "mcm_r7_q2c_features"
+author: "renyan"
+date: "2020/3/9"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+- 本文档用于第二问c,提取三种商品好评差评的特征词语
+- 运行基础是前两个已经运行完毕，产生了
+    - hd_bf_word2, hd_gf_word2
+    - pc_bf_word2, pc_gf_word2
+    - mv_bf_word2, mv_gf_word2
+    
+```{r}
+top_n <- 100
+```
+    
+# hair_dryer
+    
+```{r}
+setwd("D:/Ryanna/mcm_real/Rcodes")
+hd_good_ti <- read.csv('../Data/hair_dryer2_tfidf_good.csv', stringsAsFactors = F)
+hd_bad_ti <- read.csv('../Data/hair_dryer2_tfidf_bad.csv', stringsAsFactors = F)
+```
+
+```{r}
+word <- names(apply(hd_good_ti[,-1], 2, sum))
+g <- data.frame('word' = word, 'sum' = apply(hd_good_ti[,-1], 2, sum))
+b <- data.frame('word' = word, 'sum' = apply(hd_bad_ti[,-1], 2, sum))
+zuocha <- data.frame('word' = word, 'goodsum_badsum' = g$sum - b$sum)
+hd_tf1 <- head(zuocha[order(zuocha$goodsum_badsum, decreasing = T),], top_n)$word
+hd_tf2 <- head(zuocha[order(zuocha$goodsum_badsum, decreasing = F),], top_n)$word
+```
+    
+
+### pacifier    
+    
+```{r}
+setwd("D:/Ryanna/mcm_real/Rcodes")
+pc_good_ti <- read.csv('../Data/pacifier2_tfidf_good.csv', stringsAsFactors = F)
+pc_bad_ti <- read.csv('../Data/pacifier2_tfidf_bad.csv', stringsAsFactors = F)
+```
+
+```{r}
+word <- names(apply(pc_good_ti[,-1], 2, sum))
+g <- data.frame('word' = word, 'sum' = apply(pc_good_ti[,-1], 2, sum))
+b <- data.frame('word' = word, 'sum' = apply(pc_bad_ti[,-1], 2, sum))
+zuocha <- data.frame('word' = word, 'goodsum_badsum' = g$sum - b$sum)
+pc_tf1 <- head(zuocha[order(zuocha$goodsum_badsum, decreasing = T),], top_n)$word
+pc_tf2 <- head(zuocha[order(zuocha$goodsum_badsum, decreasing = F),], top_n)$word
+```
+
+### microwave
+
+```{r}
+setwd("D:/Ryanna/mcm_real/Rcodes")
+mv_good_ti <- read.csv('../Data/microwave2_tfidf_good.csv', stringsAsFactors = F)
+mv_bad_ti <- read.csv('../Data/microwave2_tfidf_bad.csv', stringsAsFactors = F)
+```
+
+```{r}
+word <- names(apply(mv_good_ti[,-1], 2, sum))
+g <- data.frame('word' = word, 'sum' = apply(mv_good_ti[,-1], 2, sum))
+b <- data.frame('word' = word, 'sum' = apply(mv_bad_ti[,-1], 2, sum))
+zuocha <- data.frame('word' = word, 'goodsum_badsum' = g$sum - b$sum)
+mv_tf1 <- head(zuocha[order(zuocha$goodsum_badsum, decreasing = T),], top_n)$word
+mv_tf2 <- head(zuocha[order(zuocha$goodsum_badsum, decreasing = F),], top_n)$word
+```
+
+
+```{r}
+feature <- data.frame('hd_tf1' = hd_tf1,
+                      'hd_tf2' = hd_tf2,
+                      'pc_tf1' = pc_tf1,
+                      'pc_tf2' = pc_tf2,
+                      'mv_tf1' = mv_tf1,
+                      'mv_tf2' = mv_tf2)
+feature
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
